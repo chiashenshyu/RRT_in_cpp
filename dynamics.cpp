@@ -1,13 +1,14 @@
-#include"dynamics.hpp"
+#include "dynamics.hpp"
 // #include "planner.hpp"
-Node Dynamics::new_state(Node q_old, double input, double time){
+// variables comment
+States Dynamics::new_state(States q_old, double input, double time){
  //  RK4
-    double dt = 0.01;
+    double dt = 0.01; // add check min dt or time
     Matrix<double,5,1> state,k1,k2,k3,k4;
     state(0,0) = q_old.x;
     state(1,0) = q_old.y;
     state(2,0) = q_old.theta;
-    state(3,0) = q_old.vy;
+    state(3,0) = q_old.v;
     state(4,0) = q_old.theta_dot;
 
     for (double i = 0;i<=time; i+=dt){
@@ -25,21 +26,16 @@ Node Dynamics::new_state(Node q_old, double input, double time){
 
     q_old.x = state(0,0);
     q_old.y = state(1,0);
-    q_old.theta =theta;
-    q_old.vy = state(3,0);
+    q_old.theta = theta;
+    q_old.v = state(3,0);
     q_old.theta_dot =  state(4,0);
     return q_old;
-// Old code for generating point list for the path==========
-//  point_list(point_indx,:) = q_old ;
-//  point_indx = 1 + point_indx;
-//  end
-//  q_f  = q_old ;
 }
 
 Matrix<double,5,1> Dynamics::dynamics(Matrix<double,5,1> state ,double u)
 {
 double mass = 760; // TODO make a seprate place to define constants and see what are better ways to declare
-double lf = 1.025;
+double lf = 1.025; // make it static
 double lr = 0.787;
 double inertia = 1490.3;
 double cf = 5146/2;
