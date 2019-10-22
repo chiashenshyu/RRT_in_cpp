@@ -91,7 +91,6 @@ void Planner::RRTstar()
     for(int i = 0; i < params.iterations; i++)
     {  
         q_new = RandomPoint(0);//pass zero to turn off goal bias
-
         /* trying new stuff*/
         nearby_nodes = tree.Nearby(q_new, 500.0);
         // if(nearby_nodes.empty()) continue; 
@@ -147,7 +146,7 @@ void Planner::RRTstar()
                 qGoalPtr->parent = qNewPtr;
                 
                 #ifdef DYNAMICS
-                visualizer.drawMapwGoalPath(tree.getRootPtr(), qGoalPtr); 
+                visualizer.drawMapGoalPath(tree.getRootPtr(), qGoalPtr); 
                 #endif
                 #ifdef DUBINSCURVE
                 visualizer.drawDubinsCurve(tree.getRootPtr(), qGoalPtr); 

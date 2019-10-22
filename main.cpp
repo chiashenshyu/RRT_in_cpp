@@ -70,8 +70,10 @@ int main()
     std::vector<double> v = {car.st.v};
     // std::vector<double> t = {mTime};
 
+    #ifdef VIZ
     Visualizer viz; 
     viz.plannerParamsIn(A);
+    #endif
 
     while(lastIndex > currentIndex){
         std::vector<double> ret = car.implementPPC(path, targetSpeed, currentIndex);
@@ -93,7 +95,7 @@ int main()
         // plt::xlim(-10, 60); 
         // plt::ylim(-25, 25); 
         plt::named_plot("path", path.cx, path.cy, "k-");
-        plt::named_plot("Tracking", x,  y,  "r*");
+        plt::named_plot("Tracking", x,  y,  "go");
         plotCar(car.st.x, car.st.y, car.st.theta);
         viz.drawObstacle();
         // plt::named_plot("Traj_woPF", xWoLoc, yWoLoc, "c*");
