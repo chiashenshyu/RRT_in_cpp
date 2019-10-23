@@ -25,7 +25,8 @@ private:
 
 public:
     Visualizer(); 
-
+    
+    void forDebugging(Eigen::MatrixXd& _obstacle);
     void plannerParamsIn(const planner_params& A); 
     void drawObstacle(); 
     void drawMap(const kdNodePtr& root, const Node& goal); 

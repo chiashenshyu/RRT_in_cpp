@@ -41,7 +41,9 @@ typedef enum
 typedef struct 
 {
     /* the initial configuration */
-    double qi[3];        
+    double qi[3];   
+    /* the end configuratio */
+    double qe[3];     
     /* the lengths of the three segments */
     double param[3];     
     /* model forward velocity / model angular velocity */

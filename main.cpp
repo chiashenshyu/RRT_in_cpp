@@ -7,8 +7,8 @@
 int main()
 {
     planner_params A;
-    A.origin = Point(400,- 400);
-    A.goal   = Point(-400, 400);
+    A.origin = Point( 400, -400);
+    A.goal   = Point(-400,  400);
     MatrixXd obstacle(5,4);
 
     // Simple Rectangle obstacle
@@ -30,33 +30,37 @@ int main()
     A.obstacle.col(2) = -1*A.obstacle.col(2);
     A.obstacle *= 5; 
 
-    A.iterations = 8000;
+    A.iterations = 10000;
     A.width      = 1000; 
     A.height     = 1000;
     A.goalProx   = 15;
 
     Planner p(A);
     
-    p.RRTstar();
+    if(p.RRTstar()){
+        cout << "Could not find path to goal" << endl;
+        return 1;
+    }
     
     Path path; 
-    p.ExtractPath(path);
+    std::vector<Node> wayPoints; 
+    p.ExtractPath(path, wayPoints);
     reverse(path.cx.begin(), path.cx.end()); 
     reverse(path.cy.begin(), path.cy.end());
 
-    double targetSpeed;
-    std::cout << "Enter target speed between 5 and 30: " << std::endl;
-    std::cin >> targetSpeed; 
-    while(true){
-        if(std::cin.fail() || targetSpeed < 5.0 || targetSpeed > 30.0){
-            std::cin.clear(); 
-            std::cin.ignore(std::numeric_limits<streamsize>::max(), '\n');
-            std::cout << "Enter target speed between 5 and 30: " << std::endl;
-            std::cin >> targetSpeed;
-        }else if(!std::cin.fail()){
-            break;
-        }
-    }
+    double targetSpeed = 15;
+    // std::cout << "Enter target speed between 5 and 30: " << std::endl;
+    // std::cin >> targetSpeed; 
+    // while(true){
+    //     if(std::cin.fail() || targetSpeed < 5.0 || targetSpeed > 30.0){
+    //         std::cin.clear(); 
+    //         std::cin.ignore(std::numeric_limits<streamsize>::max(), '\n');
+    //         std::cout << "Enter target speed between 5 and 30: " << std::endl;
+    //         std::cin >> targetSpeed;
+    //     }else if(!std::cin.fail()){
+    //         break;
+    //     }
+    // }
 
      
     // double T = 100.0
@@ -94,6 +98,9 @@ int main()
         // plt::figure_size(1200, 780); 
         // plt::xlim(-10, 60); 
         // plt::ylim(-25, 25); 
+        for(auto& n : wayPoints){
+            plotPoint(n.state.x, n.state.y, "ro");
+        }
         plt::named_plot("path", path.cx, path.cy, "k-");
         plt::named_plot("Tracking", x,  y,  "go");
         plotCar(car.st.x, car.st.y, car.st.theta);

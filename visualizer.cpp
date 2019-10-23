@@ -16,7 +16,7 @@ void Visualizer::drawNodes(const kdNodePtr& root){
     if(root == nullptr) return; 
 
     bool isOrigin = true; 
-    string nodeType, lineType = "k"; 
+    string nodeType, lineType = "c"; 
     
     std::queue<kdNodePtr> q; 
     q.push(root); 
@@ -25,7 +25,7 @@ void Visualizer::drawNodes(const kdNodePtr& root){
         Node      n = p->node, n2; 
         q.pop(); 
         double x1 = n.state.x, y1 = n.state.y, x2, y2; 
-        nodeType = "k*"; 
+        nodeType = "c*"; 
         if(isOrigin){
             isOrigin = false; 
             nodeType = "ro"; 
@@ -68,7 +68,6 @@ void Visualizer::wireGoalPath(const kdNodePtr& goalPtr){
         n2 = p->parent.lock()->node; 
         double x1 = n1.state.x, y1 = n1.state.y, x2 = n2.state.x, y2 = n2.state.y; 
         plotLine(x1, y1, x2, y2, "r-"); 
-        
         p = p->parent.lock(); 
     }
 }
@@ -104,6 +103,10 @@ Visualizer::Visualizer(){
     mFrame = 0; 
 }
 
+void Visualizer::forDebugging(Eigen::MatrixXd& _obstacle){
+    obstacle = _obstacle; 
+}
+
 void Visualizer::plannerParamsIn(const planner_params& A){
     xUpperLim =  A.height / 2 + 100;
     xLowerLim = -A.height / 2 - 100; 
@@ -115,8 +118,8 @@ void Visualizer::plannerParamsIn(const planner_params& A){
 
 void Visualizer::drawMap(const kdNodePtr& root, const Node& goal){
     plt::clf(); 
-    // plt::xlim(xLowerLim, xUpperLim);
-    // plt::ylim(yLowerLim, yUpperLim);
+    plt::xlim(-600,600);
+    plt::ylim(-600,600);
 
     drawObstacle(); 
     drawNodes(root); 
@@ -127,10 +130,13 @@ void Visualizer::drawMap(const kdNodePtr& root, const Node& goal){
 
 void Visualizer::drawMapGoalPath(const kdNodePtr& root, const kdNodePtr& goalPtr){
     plt::clf(); 
+    plt::xlim(-600,600);
+    plt::ylim(-600,600);
     // plt::xlim(xLowerLim, xUpperLim);
     // plt::ylim(yLowerLim, yUpperLim);
 
     drawObstacle(); 
+    drawNodes(root); 
     wireGoalPath(goalPtr); 
     drawGoal(goalPtr->node); 
 
@@ -148,5 +154,5 @@ void Visualizer::drawDubinsCurve(const kdNodePtr& root, const kdNodePtr& goalPtr
     drawGoal(goalPtr->node);
 
     // plt::show(); 
-    // plt::pause(0.0001);
+    plt::pause(0.0001);
 }

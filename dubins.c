@@ -94,6 +94,9 @@ int dubins_shortest_path(DubinsPath* path, double q0[3], double q1[3], double rh
     path->qi[0] = q0[0];
     path->qi[1] = q0[1];
     path->qi[2] = q0[2];
+    path->qe[0] = q1[0];
+    path->qe[1] = q1[1];
+    path->qe[2] = q1[2];
     path->rho = rho;
  
     for( i = 0; i < 6; i++ ) {

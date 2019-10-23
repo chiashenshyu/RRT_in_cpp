@@ -1,24 +1,23 @@
 #include "planner.hpp"
 
-/*
-* static
-*/
+/**
+ * static
+ */
 double Planner::distCoeff = 300.0; 
 
 default_random_engine generator(time(0));
 uniform_real_distribution<double> distribution(0,1);
 
-/*
-* public
-*/
+/**
+ * public
+ */
 
 double EucDist(Node& q1, Node& q2)
 {
     return q1.state.Cost(q2.state);
 }
 
-Planner::Planner(const planner_params& params_in)
-{
+Planner::Planner(const planner_params& params_in){
     params       = params_in; 
     steering_max = 1.02; 
     steering_inc = steering_max/21;
@@ -45,8 +44,7 @@ Planner::Planner(const planner_params& params_in)
     #endif
 }
 
-void Planner::Steer()
-{
+void Planner::Steer(){
     Node q_f, q_possible; 
     double best_angle   = 0; 
     double dist         = numeric_limits<double>::infinity();
@@ -71,8 +69,7 @@ void Planner::Steer()
     q_new = q_possible; 
 }
 
-int Planner::DubinsCurve(DubinsPath* path)
-{
+int Planner::DubinsCurve(DubinsPath* path){
     Node q_nearest = qNearestPtr->node ; 
 
     double q0[]          = {q_nearest.state.x, q_nearest.state.y, q_nearest.state.theta}; 
@@ -80,24 +77,27 @@ int Planner::DubinsCurve(DubinsPath* path)
     double turningRadius = 30.0; 
     
     int err = dubins_shortest_path(path, q0, q1, turningRadius); 
+
+    // testing 
+    double length = dubins_path_length(path);
+    double dist   = calDistNode(q_new, q_nearest);  
+    //
     
-    return (err)? 0 : 1; 
+    return (err || length > 3 * dist)? 0 : 1; 
 }
 
-void Planner::RRTstar()
-{
+int Planner::RRTstar(){
     clock_t st = clock();
     vector<kdNodePtr> nearby_nodes; 
-    for(int i = 0; i < params.iterations; i++)
+    int i = 0;
+    for(; i <= params.iterations; i++)
     {  
-        q_new = RandomPoint(0);//pass zero to turn off goal bias
+        q_new = RandomPoint(0); //pass zero to turn off goal bias
         /* trying new stuff*/
-        nearby_nodes = tree.Nearby(q_new, 500.0);
+        nearby_nodes = tree.Nearby(q_new, 200.0);
         // if(nearby_nodes.empty()) continue; 
-        // std::cout << "dasdasd" << std::endl;
         // qNearestPtr = findNearestLeastCost(nearby_nodes);
         qNearestPtr =  tree.findNearestPtr(q_new);
-        /*                 */
 
         q_new.cost  += EucDist(q_new, qNearestPtr->node);  
         double distNewNear = EucDist(q_new, qNearestPtr->node); 
@@ -108,9 +108,9 @@ void Planner::RRTstar()
         
         DubinsPath path;
         if(DubinsCurve(&path) == 0) continue; 
-        q_new.cost = path.param[0] + path.param[1] + path.param[2]; 
+        q_new.cost = dubins_path_length(&path);  
 
-        if(distNewNear < 1000 && collisionCheckDubins(&path))
+        if(distNewNear < 200 && collisionCheckDubins(&path))
         #endif
         
         #ifdef DYNAMICS
@@ -127,7 +127,7 @@ void Planner::RRTstar()
             qNewPtr->parent = qNearestPtr; 
             
             #ifdef DUBINSCURVE
-            qNewPtr->path      = path; 
+            qNewPtr->path       = path; 
             qNewPtr->node.cost += qNearestPtr->node.cost; 
             #endif
 
@@ -141,41 +141,46 @@ void Planner::RRTstar()
             if(GoalProx())
             #endif
             {
-                #ifdef VISUALIZATION
-                qGoalPtr = tree.insert(q_goal); 
-                qGoalPtr->parent = qNewPtr;
-                
-                #ifdef DYNAMICS
-                visualizer.drawMapGoalPath(tree.getRootPtr(), qGoalPtr); 
-                #endif
-                #ifdef DUBINSCURVE
-                visualizer.drawDubinsCurve(tree.getRootPtr(), qGoalPtr); 
-                #endif
-                
-                #endif
-                
-                cout << "Number of iteration: " << i << endl;
-                return; 
+                double tempCost = calDistNode(q_new, q_goal) + qNewPtr->node.cost;  
+                if(qGoalPtr == nullptr){
+                    qGoalPtr = tree.insert(q_goal); 
+                    qGoalPtr->parent = qNewPtr;
+                    qGoalPtr->node.cost = tempCost; 
+                }else{
+                    if(tempCost < qGoalPtr->node.cost){
+                        qGoalPtr->parent = qNewPtr; 
+                        qGoalPtr->node.cost = tempCost; 
+                    }
+                }                                
             }
         }
-        #ifdef VISUALIZATION
-        // visualizer.drawMap(tree.getRootPtr(), q_goal); 
-        #endif
-
         cout << i << endl;
+    
+    #ifdef VISUALIZATION                                
+    if(i % 1000 == 0 && qGoalPtr != nullptr){
+        #ifdef DYNAMICS
+        visualizer.drawMapGoalPath(tree.getRootPtr(), qGoalPtr); 
+        #elif defined(DUBINSCURVE)
+        cout << endl << endl << qGoalPtr->node.cost << endl << endl;
+        visualizer.drawDubinsCurve(tree.getRootPtr(), qGoalPtr);         
+        #endif
+    }
+    #endif
     }
     cout << "Time is: " << (clock()-st)/CLOCKS_PER_SEC << endl;
-    return;
+    return (qGoalPtr == nullptr)? 1 : 0;
 }
 
-int helper(double q[3], double x, void* user_data)
-{   
+int helper(double q[3], double x, void* user_data){   
     return 0; 
 }
 
-void Planner::ExtractPath(Path& path){
+void Planner::ExtractPath(Path& path, std::vector<Node>& wayPoints){
     kdNodePtr p = qGoalPtr;
+    wayPoints.clear(); 
+    wayPoints.push_back(qGoalPtr->node); 
     while(p && p->parent.lock()){
+        wayPoints.push_back(p->parent.lock()->node);
         std::vector<std::vector<double>> samplePoints; 
         std::vector<double> xTmp, yTmp; 
         dubins_path_sample_many(&p->path, 5.0, helper, samplePoints); 
@@ -200,14 +205,13 @@ void Planner::ExtractPath(Path& path){
     }
 }
 
-void Planner::print()
-{
+void Planner::print(){
     tree.printTree();
 }
 
 /**
-* private
-*/
+ * private
+ */
 
 kdNodePtr Planner::findNearestLeastCost(std::vector<kdNodePtr> nearbyNodes){
     double minCost = pow((params.width + params.height), 2), tempCost; 
@@ -222,8 +226,7 @@ kdNodePtr Planner::findNearestLeastCost(std::vector<kdNodePtr> nearbyNodes){
     return ret;
 }
 
-Node Planner::RandomPoint()
-{
+Node Planner::RandomPoint(){
     Node q_new;
 
     q_new.state.RandomState(distribution(generator));
@@ -237,8 +240,7 @@ Node Planner::RandomPoint()
     return q_new; 
 }
 
-Node Planner::RandomPoint(int k) //k nearest planner
-{       
+Node Planner::RandomPoint(int k){       
     if (k == 0){
         double tmp = maxDist + distCoeff;
         
@@ -278,8 +280,7 @@ Node Planner::RandomPoint(int k) //k nearest planner
     }
 }
 
-bool Planner::SteerForRewire(const kdNodePtr& p1, const kdNodePtr& p2)
-{
+bool Planner::SteerForRewire(const kdNodePtr& p1, const kdNodePtr& p2){
     double x_eps = 0.3, y_eps = 0.3; // static make ratio of the arear of the map
     for(double s = -steering_max; s <= steering_inc; s += steering_inc)
     {
@@ -293,12 +294,11 @@ bool Planner::SteerForRewire(const kdNodePtr& p1, const kdNodePtr& p2)
     return false;
 }
 
-bool Planner::dubinForRewire(const kdNodePtr& p1, const kdNodePtr& p2, DubinsPath* path)
-{
+bool Planner::dubinForRewire(const kdNodePtr& p1, const kdNodePtr& p2, DubinsPath* path){
     Node n1 = p1->node, n2 = p2->node;
     double q0[]          = {n1.state.x, n1.state.y, n1.state.theta}; 
     double q1[]          = {n2.state.x, n2.state.y, n2.state.theta}; 
-    double turningRadius = 10.0; 
+    double turningRadius = 30.0; 
     
     int err = dubins_shortest_path(path, q0, q1, turningRadius);
     return (err)? false : true;
@@ -314,17 +314,22 @@ bool Planner::collisionCheckDubins(DubinsPath* path){
     for(;x <= len; x += len/50){         
         Point p(qInit[0], qInit[1]); 
         dubins_path_sample(path, x, qInit); 
-        Point q(qInit[0], qInit[1]);         
+        Point q(qInit[0], qInit[1]);     
         if (abs(q.x) > params.width/2 || abs(q.y) > params.height/2 || !CollisionCheckPoint(p, q, params.obstacle)){
             return !safe; 
         };
     }
+    if(abs(path->qe[0] - qInit[0]) > 1.0 || abs(path->qe[1] - qInit[1]) > 1.0){
+        Point p(qInit[0], qInit[1]); 
+        Point q(path->qe[0], path->qe[1]); 
+        if(!CollisionCheckPoint(p, q, params.obstacle)) return !safe; 
+    }
+    
     return safe; 
 }
 
 
-void Planner::Rewire(vector<kdNodePtr>& nearby_nodes)
-{
+void Planner::Rewire(vector<kdNodePtr>& nearby_nodes){
     double temp_cost; 
     for(auto& q : nearby_nodes)
     {
@@ -333,7 +338,7 @@ void Planner::Rewire(vector<kdNodePtr>& nearby_nodes)
         #ifdef DUBINSCURVE
         DubinsPath path; 
         if(!dubinForRewire(qNewPtr, q, &path)) continue;
-        temp_cost = qNewPtr->node.cost + path.param[0] + path.param[1] + path.param[2]; 
+        temp_cost = qNewPtr->node.cost + dubins_path_length(&path);
         if(q->node.cost > temp_cost && collisionCheckDubins(&path))
         {
             q->path = path; 
@@ -351,8 +356,7 @@ void Planner::Rewire(vector<kdNodePtr>& nearby_nodes)
     }
 }
 
-void Planner::ReviseNearest(const vector<kdNodePtr>& nearby_nodes)
-{
+void Planner::ReviseNearest(const vector<kdNodePtr>& nearby_nodes){
     double new_cost; 
     for(auto i : nearby_nodes)
     {
@@ -366,8 +370,7 @@ void Planner::ReviseNearest(const vector<kdNodePtr>& nearby_nodes)
     }
 }
 
-bool Planner::GoalProx()
-{
+bool Planner::GoalProx(){
     double dist = EucDist(q_new, q_goal);
     return (dist < params.goalProx)? true : false; 
 }
@@ -378,7 +381,7 @@ bool Planner::GoalProxDubins(){
     double q[3];
     for(int i = 0; i < 3; i++) q[i] = path.qi[i];
     bool GOAL = true; 
-    for(;x <= len; x += len/8){
+    for(;x <= len; x += len/10){
         dubins_path_sample(&path, x, q); 
         dist = sqrt(pow(q_goal.state.x - q[0], 2) + pow(q_goal.state.y-q[1],2)); 
         if(dist < params.goalProx){ 

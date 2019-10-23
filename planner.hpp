@@ -11,7 +11,6 @@
 
 // Uncomment for Dubins Curve
 #define DUBINSCURVE
-
 #ifndef DUBINSCURVE
 #define DYNAMICS
 #endif
@@ -64,8 +63,8 @@ public:
     
     void Steer(); 
     int  DubinsCurve(DubinsPath* path); 
-    void RRTstar(); 
-    void ExtractPath(Path& path);
+    int RRTstar(); 
+    void ExtractPath(Path& path, std::vector<Node>& wayPoints);
     void print(); 
     
     // friend bool CollisionCheck(Node qa, Node qb, MatrixXd obstacle); 
