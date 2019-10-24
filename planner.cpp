@@ -108,9 +108,9 @@ int Planner::RRTstar(){
         
         DubinsPath path;
         if(DubinsCurve(&path) == 0) continue; 
-        q_new.cost = dubins_path_length(&path);  
+        q_new.cost = dubins_path_cost(&path);  
 
-        if(distNewNear < 200 && collisionCheckDubins(&path))
+        if(distNewNear < 500 && collisionCheckDubins(&path))
         #endif
         
         #ifdef DYNAMICS
@@ -157,14 +157,14 @@ int Planner::RRTstar(){
         cout << i << endl;
     
     #ifdef VISUALIZATION                                
-    if(i % 1000 == 0 && qGoalPtr != nullptr){
-        #ifdef DYNAMICS
-        visualizer.drawMapGoalPath(tree.getRootPtr(), qGoalPtr); 
-        #elif defined(DUBINSCURVE)
-        cout << endl << endl << qGoalPtr->node.cost << endl << endl;
-        visualizer.drawDubinsCurve(tree.getRootPtr(), qGoalPtr);         
-        #endif
-    }
+    // if(i % 1000 == 0 && qGoalPtr != nullptr){
+    //     #ifdef DYNAMICS
+    //     visualizer.drawMapGoalPath(tree.getRootPtr(), qGoalPtr); 
+    //     #elif defined(DUBINSCURVE)
+    //     cout << endl << endl << qGoalPtr->node.cost << endl << endl;
+    //     visualizer.drawDubinsCurve(tree.getRootPtr(), qGoalPtr);         
+    //     #endif
+    // }
     #endif
     }
     cout << "Time is: " << (clock()-st)/CLOCKS_PER_SEC << endl;
@@ -338,7 +338,7 @@ void Planner::Rewire(vector<kdNodePtr>& nearby_nodes){
         #ifdef DUBINSCURVE
         DubinsPath path; 
         if(!dubinForRewire(qNewPtr, q, &path)) continue;
-        temp_cost = qNewPtr->node.cost + dubins_path_length(&path);
+        temp_cost = qNewPtr->node.cost + dubins_path_cost(&path);
         if(q->node.cost > temp_cost && collisionCheckDubins(&path))
         {
             q->path = path; 

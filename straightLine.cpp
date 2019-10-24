@@ -10,10 +10,10 @@ uniform_real_distribution<double> distribution(0,1);
 
 straightLine::straightLine(Eigen::MatrixXd& ob){
     qOrig.state.x = 400; 
-    qOrig.state.y = 300; 
+    qOrig.state.y = -400; 
     qOrig.cost    = 0; 
     qGoal.state.x = -400; 
-    qGoal.state.y = -400; 
+    qGoal.state.y = 400; 
     qGoal.cost    = 0; 
 
     tree.treeInit(qOrig);
@@ -51,11 +51,29 @@ void straightLine::rewire(){
     }
 }
 
+void straightLine::extractPath(Path& path){
+    kdNodePtr p = qGoalPtr; 
+    path.cx.clear(); 
+    path.cy.clear(); 
+    while(p && p->parent.lock()){
+        Node n1 = p->node, n2 = p->parent.lock()->node; 
+        double dist = calDistNode(n1, n2), incl = dist / (2 * (dist/10));  
+        double xVec = (n2.state.x - n1.state.x) / dist, yVec = (n2.state.y - n1.state.y) / dist;
+        for(double i = 0; i < dist; i += incl){
+            path.cx.push_back(n1.state.x + xVec * i);
+            path.cy.push_back(n1.state.y + yVec * i); 
+        } 
+        p = p->parent.lock();
+    }
+    path.cx.push_back(p->node.state.x); 
+    path.cy.push_back(p->node.state.y); 
+}
+
 /**
  * public
  */
 
-void straightLine::rrtStar(){
+void straightLine::rrtStar(Path& path){
     int iter = 0, minNodeAmount = 0; 
     cout << "Input minimum amount of nodes: " << endl; 
     cin >> minNodeAmount; 
@@ -83,15 +101,20 @@ void straightLine::rrtStar(){
                         qGoalPtr->node.cost = calDistNode(qGoal, qNew) + qNewPtr->node.cost;
                     }
                 }
+                /*
                 if(iter > minNodeAmount){
                     cout << "drawing..." << endl;
                     visualizer.drawMapGoalPath(tree.getRootPtr(), qGoalPtr);
                 }
+                */
             }
             
         }
-        if(qGoalPtr == nullptr && iter > minNodeAmount)
-            visualizer.drawMap(tree.getRootPtr(), qGoal);            
+        if(qGoalPtr != nullptr && iter > minNodeAmount){
+            // visualizer.drawMap(tree.getRootPtr(), qGoal);
+            extractPath(path); 
+            return; 
+        }            
 
         cout << iter << endl;
         iter++;
@@ -102,6 +125,21 @@ void straightLine::rrtStar(){
 /**
  * main
  */
+
+void smooth(vector<double>& x, vector<double>& y, vector<double>& newX, vector<double>& newY){
+    double weightData = 0.1, weightSmooth = 0.5, tolerance = 0.00001; 
+    newX = x; newY = y; 
+    double change = tolerance; 
+    while(change >= tolerance){
+        change = 0.0; 
+        for(int i = 1; i < x.size()-1; i++){
+            double aux = newX[i], auy = newY[i]; 
+            newX[i] += weightData * (x[i] - newX[i]) + weightSmooth * (newX[i-1] + newX[i+1] - 2.0 * newX[i]);
+            newY[i] += weightData * (y[i] - newY[i]) + weightSmooth * (newY[i-1] + newY[i+1] - 2.0 * newY[i]);
+            change  += abs(aux - newX[i]) + abs(auy - newY[i]); 
+        }
+    }
+}
 
 int main(){
     // Eigen::MatrixXd obstacle(4,4);
@@ -124,6 +162,20 @@ int main(){
     obstacle *= 5; 
 
     straightLine st(obstacle); 
-    st.rrtStar(); 
+    Path path; 
+    st.rrtStar(path); 
+
+    std::map<std::string, std::string> keywords; 
+    keywords["linewidth"] = "2"; 
+    keywords["color"] = "c"; 
+    plt::plot(path.cx, path.cy, keywords);
+
+    vector<double> x, y; 
+    smooth(path.cx, path.cy, x, y); 
+    keywords["color"] = "k";
+    plt::plot(x, y, keywords);  
+    st.visualizer.drawObstacle();
+    plt::show();
+    
     return 0;
 }

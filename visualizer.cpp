@@ -67,7 +67,11 @@ void Visualizer::wireGoalPath(const kdNodePtr& goalPtr){
         n1 = p->node; 
         n2 = p->parent.lock()->node; 
         double x1 = n1.state.x, y1 = n1.state.y, x2 = n2.state.x, y2 = n2.state.y; 
-        plotLine(x1, y1, x2, y2, "r-"); 
+        std::map<std::string, std::string> keywords; 
+        keywords["linewidth"] = "2"; 
+        keywords["color"] = "r";
+        // plotLine(x1, y1, x2, y2, "r-"); 
+        plotLine(x1, y1, x2, y2, keywords);
         p = p->parent.lock(); 
     }
 }

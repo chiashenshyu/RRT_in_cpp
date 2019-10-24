@@ -4,6 +4,21 @@
 
 #define VIZ
 
+void smooth(std::vector<double>& x, std::vector<double>& y, std::vector<double>& newX, std::vector<double>& newY){
+    double weightData = 0.1, weightSmooth = 0.5, tolerance = 0.00001; 
+    newX = x; newY = y; 
+    double change = tolerance; 
+    while(change >= tolerance){
+        change = 0.0; 
+        for(int i = 1; i < x.size()-1; i++){
+            double aux = newX[i], auy = newY[i]; 
+            newX[i] += weightData * (x[i] - newX[i]) + weightSmooth * (newX[i-1] + newX[i+1] - 2.0 * newX[i]);
+            newY[i] += weightData * (y[i] - newY[i]) + weightSmooth * (newY[i-1] + newY[i+1] - 2.0 * newY[i]);
+            change  += abs(aux - newX[i]) + abs(auy - newY[i]); 
+        }
+    }
+}
+
 int main()
 {
     planner_params A;
@@ -30,7 +45,7 @@ int main()
     A.obstacle.col(2) = -1*A.obstacle.col(2);
     A.obstacle *= 5; 
 
-    A.iterations = 10000;
+    A.iterations = 40000;
     A.width      = 1000; 
     A.height     = 1000;
     A.goalProx   = 15;
@@ -47,6 +62,10 @@ int main()
     p.ExtractPath(path, wayPoints);
     reverse(path.cx.begin(), path.cx.end()); 
     reverse(path.cy.begin(), path.cy.end());
+    std::vector<double> _x, _y; 
+    smooth(path.cx, path.cy, _x, _y);
+    path.cx = _x; 
+    path.cy = _y; 
 
     double targetSpeed = 15;
     // std::cout << "Enter target speed between 5 and 30: " << std::endl;

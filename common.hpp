@@ -248,6 +248,11 @@ inline void plotLine(double x1, double y1, double x2, double y2, string lineType
     plt::plot(x, y, lineType); 
 }
 
+inline void plotLine(double x1, double y1, double x2, double y2, std::map<std::string, std::string>& m){
+    vector<double> x = {x1, x2}, y = {y1, y2}; 
+    plt::plot(x, y, m);
+}
+
 inline void plotCircle(double x, double y, double radius){
     double inc = M_PI / 20;
     std::vector<double> xPos, yPos; 

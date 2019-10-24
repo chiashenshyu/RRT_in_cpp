@@ -105,6 +105,13 @@ int dubins_path(DubinsPath* path, double q0[3], double q1[3], double rho, Dubins
 double dubins_path_length(DubinsPath* path);
 
 /**
+ * Calculate the cost of na initialised path
+ * 
+ * @param path - the path to fing the length of
+ */
+double dubins_path_cost(DubinsPath* path);
+
+/**
  * Return the length of a specific segment in an initialized path
  *
  * @param path - the path to find the length of

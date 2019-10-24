@@ -1,27 +1,31 @@
 #include "common.hpp"
 
+void smooth(vector<double>& x, vector<double>& y, vector<double>& newX, vector<double>& newY){
+    double weightData = 0.1, weightSmooth = 0.1, tolerance = 0.00001; 
+    newX = x; newY = y; 
+    double change = tolerance; 
+    while(change >= tolerance){
+        change = 0.0; 
+        for(int i = 1; i < x.size()-1; i++){
+            double aux = newX[i], auy = newY[i]; 
+            newX[i] += weightData * (x[i] - newX[i]) + weightSmooth * (newX[i-1] + newX[i+1] - 2.0 * newX[i]);
+            newY[i] += weightData * (y[i] - newY[i]) + weightSmooth * (newY[i-1] + newY[i+1] - 2.0 * newY[i]);
+            change  += abs(aux - newX[i]) + abs(auy - newY[i]); 
+        }
+        cout << change << endl;
+    }
+}
+
 int main(){
-    double l = 5.1, w = 3.2; 
-    double theta = M_PI / 10; 
+    vector<double> x = {0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 4.0};
+    vector<double> y = {0.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 4.0}; 
+    vector<double> newX, newY; 
+    smooth(x, y, newX, newY);
 
-    double x = 100.0, y = 100.0; 
-    double x1 = x + l/2, x2 = x1 - l; 
-    double y1 = y + w/2, y2 = y1 - w; 
-    // for(int i = 0; i < 4; i++){
-        // plotPoint(x1, y1, ".r");
-        // plotPoint(x1, y2, ".b");
-        // plotPoint(x2, y1, ".y");
-        // plotPoint(x2, y2, ".g");
+    plt::plot(x, y, "r-");
+    plt::plot(newX, newY, "b-");
 
-        // plotPoint(x + l/2*cos(theta)-w/2*sin(theta), y + l/2*sin(theta)+w/2*cos(theta), ".r");
-        // plotPoint(x + l/2*cos(theta)+w/2*sin(theta), y + l/2*sin(theta)-w/2*cos(theta), ".b");
-        // plotPoint(x - l/2*cos(theta)-w/2*sin(theta), y - l/2*sin(theta)+w/2*cos(theta), ".y");
-        // plotPoint(x - l/2*cos(theta)+w/2*sin(theta), y - l/2*sin(theta)-w/2*cos(theta), ".g");
-
-        
-    // }
-    plotCar(x, y, theta);
-    plotCar(x, y, 0);
-    plt::axis("equal");
+    plt::xlim(-1, 5);
+    plt::ylim(-1, 5);
     plt::show();
 }

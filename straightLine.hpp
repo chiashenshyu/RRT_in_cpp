@@ -17,7 +17,7 @@ private:
     Node qNew; 
     Node qNear; 
 
-    Visualizer visualizer;
+    
 
     kdNodePtr qNewPtr; 
     kdNodePtr qNearPtr; 
@@ -27,9 +27,11 @@ private:
     void findNearbyNodes(); 
     void rewire(); 
     void randomPoint();
+    void extractPath(Path& path);
 public:
-    straightLine(Eigen::MatrixXd& ob);
+    Visualizer visualizer;
     
-    void rrtStar(); 
+    straightLine(Eigen::MatrixXd& ob);
+    void rrtStar(Path& path); 
 }; 
 

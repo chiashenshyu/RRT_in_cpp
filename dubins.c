@@ -152,6 +152,18 @@ double dubins_path_length( DubinsPath* path )
     return length;
 }
 
+double dubins_path_cost( DubinsPath* path )
+{
+    double cost = 0.0; 
+    if(path->type != 4 || path->type != 5){
+        cost += (path->param[0] + path->param[2]) * 5/*1*/; 
+        cost += path->param[1]; 
+    }else{
+        cost += (path->param[0] + path->param[1] + path->param[2]) * 3; 
+    }
+    cost *= cost * path->rho;
+}
+
 double dubins_segment_length( DubinsPath* path, int i )
 {
     if( (i < 0) || (i > 2) )
