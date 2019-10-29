@@ -77,6 +77,11 @@ typedef struct states{
     double theta_dot;
     double rearX; 
     double rearY; 
+    states(){
+    }
+    states(double _x, double _y, double _theta, double _v)
+    :x(_x),y(_y),theta(_theta),v(_v){
+    }
     bool operator==(const states& A) const{
         return (x == A.x && y == A.y);
     }
@@ -270,7 +275,7 @@ inline void plotPoint(double x1, double y1, string pointType){
     plt::plot(x, y, pointType);
 }
 
-inline void plotCar(double x, double y, double theta){
+inline void plotCar(double x, double y, double theta, string color = "r"){
     double l = 20, w = 12; 
     double x1 = x + l/2, x2 = x1 - l, v1x, v2x, v3x, v4x; 
     double y1 = y + w/2, y2 = y1 - w, v1y, v2y, v3y, v4y;
@@ -281,7 +286,7 @@ inline void plotCar(double x, double y, double theta){
     
 
     plotLine(v1x, v1y, v2x, v2y, "b");
-    plotLine(v3x, v3y, v2x, v2y, "r");
-    plotLine(v3x, v3y, v4x, v4y, "r");
-    plotLine(v1x, v1y, v4x, v4y, "r");
+    plotLine(v3x, v3y, v2x, v2y, color);
+    plotLine(v3x, v3y, v4x, v4y, color);
+    plotLine(v1x, v1y, v4x, v4y, color);
 }

@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "ParticleFilter.hpp"
 #include "planner.hpp"
 #include "ppc.hpp"
 
@@ -21,6 +22,9 @@ void smooth(std::vector<double>& x, std::vector<double>& y, std::vector<double>&
 
 int main()
 {
+    /**
+     * RRT star planner
+     */
     planner_params A;
     A.origin = Point( 400, -400);
     A.goal   = Point(-400,  400);
@@ -65,8 +69,32 @@ int main()
     std::vector<double> _x, _y; 
     smooth(path.cx, path.cy, _x, _y);
     path.cx = _x; 
-    path.cy = _y; 
+    path.cy = _y;
 
+    /** 
+     * Visualizer
+     */
+    #ifdef VIZ
+    Visualizer viz; 
+    viz.plannerParamsIn(A);
+    #endif
+
+    /**
+     * PF Localization
+     */
+    ParticleFilter pf(1000);  
+    std::vector<std::vector<double>> landmark = {{   0,  400},
+                                                 {-450,  450},
+                                                 {-400, -400},
+                                                 { 100, -300},
+                                                 { 500,  350},
+                                                 { 425, -450}
+                                                 };
+    std::vector<bool> lmVisible(landmark.size(), false);
+ 
+    /** 
+     * Pure Pursuit Controller
+     */
     double targetSpeed = 15;
     // std::cout << "Enter target speed between 5 and 30: " << std::endl;
     // std::cin >> targetSpeed; 
@@ -81,36 +109,53 @@ int main()
     //     }
     // }
 
-     
-    // double T = 100.0
-
     ppc car(A.origin.x, A.origin.y, -M_PI, 0.0); 
-    int lastIndex = path.cx.size()-1, currentIndex = 0; 
+    ppc carP(A.origin.x, A.origin.y, -M_PI, 0.0);
+    int lastIndex = path.cx.size()-1, currentIndex = 0, currentIndexP = 0; 
     // double mTime = 0.0; 
-    std::vector<double> x = {car.st.x};
-    std::vector<double> y = {car.st.y};
-    std::vector<double> theta = {car.st.theta};
-    std::vector<double> v = {car.st.v};
+    std::vector<double> x = {car.st.x}, xp = x;
+    std::vector<double> y = {car.st.y}, yp = y;
+    std::vector<double> theta = {car.st.theta}, thetap = theta;
+    std::vector<double> v = {car.st.v}, vp = v;
     // std::vector<double> t = {mTime};
 
-    #ifdef VIZ
-    Visualizer viz; 
-    viz.plannerParamsIn(A);
-    #endif
-
-    while(lastIndex > currentIndex){
+    bool init = false; 
+    while(lastIndex > currentIndex && currentIndexP < lastIndex){
+        if(!init){
+            init = true; 
+            std::vector<double> nullP; 
+            pf.priorUpdate(car.st, nullP); 
+        }
+        
         std::vector<double> ret = car.implementPPC(path, targetSpeed, currentIndex);
+        std::vector<double> retP = carP.implementPPC(path, targetSpeed, currentIndex);
         currentIndex = ret[0];
-        // mTime += car.dt; 
-        // std::cout << currentIndex << ": " << car.st.x << " " << car.st.y; 
-        // std::cout << " " << car.st.theta << " " << car.st.v << std::endl;
-        // std::cout << "path: " << path.cx[currentIndex] << " " << path.cy[currentIndex]; 
-        // std::cout << " distance: " << calDist(car.st.x, car.st.y, path.cx[currentIndex], path.cy[currentIndex]); 
-        // std::cout << std::endl << std::endl;
+        currentIndexP = retP[0];
+        
+        for(int i = 0; i < landmark.size(); i++){
+            Point p1(car.st.x, car.st.y), p2(landmark[i][0], landmark[i][1]); 
+            lmVisible[i] = CollisionCheckPoint(p1, p2, A.obstacle)? true : false;
+        }
+
+        std::vector<double> param(ret.begin()+1, ret.begin()+5);
+        pf.priorUpdate(car.st, param); 
+        pf.observation(car.st, landmark, lmVisible);
+        pf.assignWeightLandmark();
+        pf.resample();
+        double xAvg, yAvg;  
+        pf.calAverage(xAvg, yAvg); 
+        cout << "difference-> x: " << abs(xAvg - carP.st.x);
+        cout << ", y: " << abs(yAvg - carP.st.y) << endl;
+        car.st.x = xAvg; car.st.y = yAvg; 
+
         x.push_back(car.st.x); 
         y.push_back(car.st.y); 
         v.push_back(car.st.theta); 
         theta.push_back(car.st.theta);
+        xp.push_back(carP.st.x); 
+        yp.push_back(carP.st.y); 
+        vp.push_back(carP.st.theta); 
+        thetap.push_back(carP.st.theta);
 
         #ifdef VIZ
         plt::clf(); 
@@ -121,8 +166,15 @@ int main()
             plotPoint(n.state.x, n.state.y, "ro");
         }
         plt::named_plot("path", path.cx, path.cy, "k-");
-        plt::named_plot("Tracking", x,  y,  "go");
-        plotCar(car.st.x, car.st.y, car.st.theta);
+        plt::named_plot("PF_Localization", x,  y,  "g-");
+        plt::named_plot("GT", xp, yp, "r-");
+        plotCar(carP.st.x, carP.st.y, carP.st.theta);
+        plotCar(car.st.x, car.st.y, car.st.theta, "g");
+        for(int i = 0; i < landmark.size(); i++){
+            plotPoint(landmark[i][0], landmark[i][1], "c*"); 
+            if(!lmVisible[i]) continue;
+            plotLine(landmark[i][0], landmark[i][1], car.st.x, car.st.y, "c-");
+        }
         viz.drawObstacle();
         // plt::named_plot("Traj_woPF", xWoLoc, yWoLoc, "c*");
 
